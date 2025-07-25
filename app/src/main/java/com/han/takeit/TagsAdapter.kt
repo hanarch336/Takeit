@@ -4,6 +4,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.han.takeit.databinding.ItemTagBinding
 import com.han.takeit.db.Tag
@@ -40,6 +41,16 @@ class TagsAdapter(
         fun bind(tag: Tag, isSelected: Boolean, onTagToggle: (String, Boolean) -> Unit, onColorClick: (Tag) -> Unit) {
             binding.textTagName.text = tag.name
             binding.checkboxTag.isChecked = isSelected
+            
+            // 设置标签名称的胶囊样式背景和文本颜色
+            val tagDrawable = ContextCompat.getDrawable(binding.root.context, R.drawable.tag_background)?.mutate()
+            tagDrawable?.setTint(Color.parseColor(tag.color))
+            binding.textTagName.background = tagDrawable
+            
+            // 根据背景色计算文本颜色
+            val textColorString = Tag.getTextColor(tag.color)
+            val textColor = Color.parseColor(textColorString)
+            binding.textTagName.setTextColor(textColor)
             
             // 设置颜色按钮的背景色
             val drawable = binding.btnTagColor.background as? GradientDrawable

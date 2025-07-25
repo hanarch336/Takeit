@@ -125,6 +125,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val maxLines = SettingsActivity.getMaxLines(this)
         notesAdapter = NotesAdapter(
             notes = notesList,
+            noteRepository = noteRepository,
             onNoteClick = { note ->
                 // 点击笔记的处理
                 editNote(note)

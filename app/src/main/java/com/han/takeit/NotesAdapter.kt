@@ -3,11 +3,18 @@ package com.han.takeit
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.han.takeit.databinding.ItemNoteBinding
+import com.google.android.flexbox.FlexboxLayout
+import com.han.takeit.db.Tag
+import com.han.takeit.db.NoteRepository
+import android.graphics.Color
 
 class NotesAdapter(
     private val notes: List<Note>,
+    private val noteRepository: NoteRepository,
     private val onNoteClick: (Note) -> Unit,
     private val onNoteLongClick: (Note) -> Unit,
     private val onSelectionChanged: (Int) -> Unit,
@@ -51,6 +58,7 @@ class NotesAdapter(
             isSelectionMode: Boolean,
             isSelected: Boolean,
             maxLines: Int,
+            noteRepository: NoteRepository,
             onNoteClick: (Note) -> Unit,
             onNoteLongClick: (Note) -> Unit,
             onToggleSelection: (Note) -> Unit
@@ -68,12 +76,10 @@ class NotesAdapter(
             binding.textTitle.text = preview
             
             // 显示标签
-            if (note.tags.isNotEmpty()) {
-                val tagsText = note.tags.joinToString(" ") { "#$it" }
-                binding.textContent.text = tagsText
-            } else {
-                binding.textContent.text = ""
-            }
+            updateTagsDisplay(note.tags, binding.tagsContainer, noteRepository)
+            
+            // 如果没有标签，隐藏标签容器
+            binding.tagsContainer.visibility = if (note.tags.isNotEmpty()) View.VISIBLE else View.GONE
             
             binding.textTime.text = note.getFormattedTime()
             
@@ -97,6 +103,46 @@ class NotesAdapter(
                 true
             }
         }
+        
+        private fun updateTagsDisplay(tags: List<String>, tagsContainer: FlexboxLayout, noteRepository: NoteRepository) {
+            tagsContainer.removeAllViews()
+            
+            // 获取所有标签对象
+            val allTagObjects = noteRepository.getAllTagObjects()
+            
+            tags.forEach { tagName ->
+                // 查找对应的Tag对象
+                val tagObject = allTagObjects.find { it.name == tagName }
+                val tagColor = tagObject?.color ?: "#6200EE" // 默认颜色
+                
+                val tagView = TextView(tagsContainer.context).apply {
+                    text = tagName
+                    
+                    // 根据标签颜色设置背景和文本颜色
+                    val tagDrawable = ContextCompat.getDrawable(context, R.drawable.tag_background)?.mutate()
+                    tagDrawable?.setTint(Color.parseColor(tagColor))
+                    background = tagDrawable
+                    
+                    // 根据背景色计算文本颜色
+                    val textColorString = Tag.getTextColor(tagColor)
+                    val textColor = Color.parseColor(textColorString)
+                    setTextColor(textColor)
+                    
+                    textSize = 14f
+                    setPadding(24, 14, 24, 14) // 为首页卡片标签设置额外内边距
+                }
+                
+                val layoutParams = FlexboxLayout.LayoutParams(
+                    FlexboxLayout.LayoutParams.WRAP_CONTENT,
+                    FlexboxLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 0, 16, 8) // 右边距16dp，下边距8dp
+                }
+                
+                tagView.layoutParams = layoutParams
+                tagsContainer.addView(tagView)
+            }
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NoteViewHolder {
@@ -113,6 +159,7 @@ class NotesAdapter(
             isSelectionMode = isSelectionMode,
             isSelected = isSelected,
             maxLines = maxLines,
+            noteRepository = noteRepository,
             onNoteClick = onNoteClick,
             onNoteLongClick = onNoteLongClick,
             onToggleSelection = { toggleNoteSelection(it) }
@@ -134,4 +181,6 @@ class NotesAdapter(
     }
 
     override fun getItemCount(): Int = notes.size
+    
+
 }
