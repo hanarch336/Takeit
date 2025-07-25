@@ -78,8 +78,7 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_tags"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:maxHeight="200dp"
+        android:layout_height="200dp"
         android:scrollbars="vertical" />
 
     <!-- 按钮区域 -->
