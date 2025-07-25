@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 基础颜色 -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- 主题颜色 - 深色模式 -->
+    <color name="primary_color">@color/primary_dark</color>
+    <color name="primary_variant_color">@color/primary_variant_dark</color>
+    <color name="secondary_color">@color/secondary_dark</color>
+    <color name="secondary_variant_color">@color/secondary_variant_dark</color>
+    
+    <!-- 背景颜色 - 深色模式 -->
+    <color name="background_color">@color/background_dark</color>
+    <color name="surface_color">@color/surface_dark</color>
+    <color name="card_background_color">@color/card_background_dark</color>
+    
+    <!-- 文字颜色 - 深色模式 -->
+    <color name="text_primary_color">@color/text_primary_dark</color>
+    <color name="text_secondary_color">@color/text_secondary_dark</color>
+    <color name="text_hint_color">@color/text_hint_dark</color>
+    
+    <!-- 分割线颜色 - 深色模式 -->
+    <color name="divider_color">@color/divider_dark</color>
+</resources>

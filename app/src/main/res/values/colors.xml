@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 基础颜色 -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- 主题颜色 - 浅色模式 -->
+    <color name="primary_light">#2196F3</color>
+    <color name="primary_variant_light">#1976D2</color>
+    <color name="secondary_light">#03DAC6</color>
+    <color name="secondary_variant_light">#018786</color>
+    
+    <!-- 背景颜色 - 浅色模式 -->
+    <color name="background_light">#FFFFFF</color>
+    <color name="surface_light">#FFFFFF</color>
+    <color name="card_background_light">#FFFFFF</color>
+    
+    <!-- 文字颜色 - 浅色模式 -->
+    <color name="text_primary_light">#212121</color>
+    <color name="text_secondary_light">#757575</color>
+    <color name="text_hint_light">#BDBDBD</color>
+    
+    <!-- 分割线颜色 - 浅色模式 -->
+    <color name="divider_light">#E0E0E0</color>
+    
+    <!-- 主题颜色 - 深色模式 -->
+    <color name="primary_dark">#BB86FC</color>
+    <color name="primary_variant_dark">#3700B3</color>
+    <color name="secondary_dark">#03DAC6</color>
+    <color name="secondary_variant_dark">#03DAC6</color>
+    
+    <!-- 背景颜色 - 深色模式 -->
+    <color name="background_dark">#121212</color>
+    <color name="surface_dark">#1E1E1E</color>
+    <color name="card_background_dark">#2C2C2C</color>
+    
+    <!-- 文字颜色 - 深色模式 -->
+    <color name="text_primary_dark">#FFFFFF</color>
+    <color name="text_secondary_dark">#B3FFFFFF</color>
+    <color name="text_hint_dark">#61FFFFFF</color>
+    
+    <!-- 分割线颜色 - 深色模式 -->
+    <color name="divider_dark">#37FFFFFF</color>
+    
+    <!-- 颜色别名 - 浅色模式 -->
+    <color name="primary_color">@color/primary_light</color>
+    <color name="primary_variant_color">@color/primary_variant_light</color>
+    <color name="secondary_color">@color/secondary_light</color>
+    <color name="secondary_variant_color">@color/secondary_variant_light</color>
+    
+    <color name="background_color">@color/background_light</color>
+    <color name="surface_color">@color/surface_light</color>
+    <color name="card_background_color">@color/card_background_light</color>
+    
+    <color name="text_primary_color">@color/text_primary_light</color>
+    <color name="text_secondary_color">@color/text_secondary_light</color>
+    <color name="text_hint_color">@color/text_hint_light</color>
+    
+    <color name="divider_color">@color/divider_light</color>
+</resources>

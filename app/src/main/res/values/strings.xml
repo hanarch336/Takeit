@@ -1,0 +1,58 @@
+<resources>
+    <string name="app_name">Takeit</string>
+    <string name="action_settings">设置</string>
+    <string name="action_search">搜索</string>
+    <string name="search_hint">搜索笔记内容...</string>
+    
+    <!-- Navigation Drawer -->
+    <string name="navigation_drawer_open">打开导航抽屉</string>
+    <string name="navigation_drawer_close">关闭导航抽屉</string>
+    
+    <!-- Menu items -->
+    <string name="menu_all_notes">所有笔记</string>
+    <string name="menu_today">今天</string>
+    <string name="menu_yesterday">昨天</string>
+    <string name="menu_this_week">本周</string>
+    <string name="menu_this_month">本月</string>
+    <string name="menu_settings">设置</string>
+    <string name="menu_about">关于</string>
+    
+    <!-- Note Edit -->
+    <string name="hint_content">写点什么...</string>
+    <string name="action_save">保存</string>
+    <string name="action_delete">删除</string>
+    <string name="new_note">新建笔记</string>
+    <string name="edit_note">编辑笔记</string>
+    
+    <!-- 多选模式 -->
+    <string name="selected_count">已选择 %d 项</string>
+    <string name="delete_confirm_title">删除笔记</string>
+    <string name="delete_confirm_message">确定要删除选中的 %d 条笔记吗？</string>
+    <string name="cancel">取消</string>
+    
+    <!-- 标签 -->
+    <string name="add_tags">添加标签</string>
+    <string name="tag_input_hint">输入标签名称</string>
+    <string name="existing_tags">已有标签</string>
+    <string name="confirm">确定</string>
+    <string name="add_tag_description">添加标签</string>
+    
+    <!-- 设置 -->
+    <string name="settings_title">设置</string>
+    <string name="language_setting">语言</string>
+    <string name="language_chinese">中文</string>
+    <string name="language_english">English</string>
+    <string name="language_system">跟随系统</string>
+    
+    <!-- 侧边栏分组标题 -->
+    <string name="group_by_date">按日期分组</string>
+    <string name="group_other">其他</string>
+    
+    <!-- 侧边栏头部 -->
+    <string name="nav_header_subtitle">记录生活的每一刻</string>
+    
+    <!-- 卡片预览设置 -->
+    <string name="card_preview_setting">卡片预览</string>
+    <string name="max_lines_setting">最大行数</string>
+    <string name="max_lines_description">设置笔记卡片预览的最大行数</string>
+</resources>
