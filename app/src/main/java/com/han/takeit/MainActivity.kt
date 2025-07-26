@@ -12,6 +12,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.GravityCompat
+import androidx.core.view.WindowCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -56,6 +57,13 @@ class MainActivity : AppCompatActivity() {
         }
         
         super.onCreate(savedInstanceState)
+        
+        // 启用边到边显示，让内容延伸到状态栏下方
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
+        // 设置状态栏为完全透明
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)

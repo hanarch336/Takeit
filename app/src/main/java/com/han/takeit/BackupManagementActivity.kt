@@ -9,6 +9,7 @@ import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.han.takeit.databinding.ActivityBackupManagementBinding
 import com.han.takeit.db.DatabaseBackupManager
@@ -34,6 +35,13 @@ class BackupManagementActivity : AppCompatActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // 启用边到边显示，让内容延伸到状态栏下方
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
+        // 设置状态栏为完全透明
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
         
         binding = ActivityBackupManagementBinding.inflate(layoutInflater)
         setContentView(binding.root)

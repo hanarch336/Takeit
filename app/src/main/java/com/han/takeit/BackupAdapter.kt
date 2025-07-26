@@ -36,9 +36,12 @@ class BackupAdapter(
             binding.apply {
                 // 从文件名中提取显示名称
                 val fileName = backup.fileName
-                val displayName = fileName
-                    .removePrefix("notes_backup_")
-                    .removeSuffix(".db")
+                val isAutoBackup = fileName.contains("autobackup_")
+                val displayName = if (isAutoBackup) {
+                    "自动备份"
+                } else {
+                    "手动备份"
+                }
                 
                 tvBackupName.text = displayName
                 tvBackupDate.text = backup.getFormattedDate()

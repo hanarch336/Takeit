@@ -74,6 +74,10 @@ class NoteEditActivity : AppCompatActivity() {
         // 启用边到边显示，让内容延伸到状态栏下方
         WindowCompat.setDecorFitsSystemWindows(window, false)
         
+        // 设置状态栏为完全透明
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        
         binding = ActivityNoteEditBinding.inflate(layoutInflater)
         setContentView(binding.root)
         

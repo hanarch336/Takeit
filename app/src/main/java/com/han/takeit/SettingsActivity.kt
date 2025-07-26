@@ -6,7 +6,6 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.os.LocaleList
 import android.widget.RadioGroup
 import android.widget.TextView
@@ -14,6 +13,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.core.view.WindowCompat
 import com.google.android.material.slider.Slider
 import com.han.takeit.db.DatabaseBackupManager
 import java.io.File
@@ -87,6 +87,14 @@ class SettingsActivity : AppCompatActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // 启用边到边显示，让内容延伸到状态栏下方
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        
+        // 设置状态栏为完全透明
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        
         setContentView(R.layout.activity_settings)
         
         setupToolbar()
