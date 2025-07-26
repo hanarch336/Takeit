@@ -10,15 +10,18 @@ import org.json.JSONObject
 class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
-        private const val DATABASE_NAME = "notes.db"
-        private const val DATABASE_VERSION = 6
+        const val DATABASE_NAME = "notes.db"
+        const val DATABASE_VERSION = 8
 
         // 笔记表
         const val TABLE_NOTES = "notes"
         const val COLUMN_ID = "id"
         const val COLUMN_CONTENT = "content"
         const val COLUMN_TIMESTAMP = "timestamp"
+        const val COLUMN_CREATED_TIME = "created_time"
+        const val COLUMN_MODIFIED_TIME = "modified_time"
         const val COLUMN_CUSTOM_PROPERTIES = "custom_properties"
+        const val COLUMN_DELETED = "deleted"
         
         // 标签表
         const val TABLE_TAGS = "tags"
@@ -37,7 +40,10 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
             .plus("$COLUMN_ID INTEGER PRIMARY KEY, ")
             .plus("$COLUMN_CONTENT TEXT, ")
             .plus("$COLUMN_TIMESTAMP INTEGER, ")
-            .plus("$COLUMN_CUSTOM_PROPERTIES TEXT DEFAULT '{}')")
+            .plus("$COLUMN_CREATED_TIME INTEGER, ")
+            .plus("$COLUMN_MODIFIED_TIME INTEGER, ")
+            .plus("$COLUMN_CUSTOM_PROPERTIES TEXT DEFAULT '{}', ")
+            .plus("$COLUMN_DELETED INTEGER DEFAULT 0)")
         db.execSQL(createNotesTable)
         
         // 创建标签表
@@ -58,6 +64,17 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        // 在升级前创建备份
+        try {
+            val context = readableDatabase.path?.let { path ->
+                // 从数据库路径获取context可能比较复杂，这里我们在调用时传入context
+                // 暂时先记录日志
+                android.util.Log.i("NoteDatabase", "Database upgrade from version $oldVersion to $newVersion")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("NoteDatabase", "Failed to create backup during upgrade", e)
+        }
+        
         if (oldVersion < 5) {
             // 为标签表添加颜色字段
             db.execSQL("ALTER TABLE $TABLE_TAGS ADD COLUMN $COLUMN_TAG_COLOR TEXT DEFAULT '#6200EE'")
@@ -65,6 +82,17 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
         if (oldVersion < 6) {
             // 为笔记表添加自定义属性字段
             db.execSQL("ALTER TABLE $TABLE_NOTES ADD COLUMN $COLUMN_CUSTOM_PROPERTIES TEXT DEFAULT '{}'")
+        }
+        if (oldVersion < 7) {
+            // 添加创建时间和修改时间字段
+            db.execSQL("ALTER TABLE $TABLE_NOTES ADD COLUMN $COLUMN_CREATED_TIME INTEGER DEFAULT 0")
+            db.execSQL("ALTER TABLE $TABLE_NOTES ADD COLUMN $COLUMN_MODIFIED_TIME INTEGER DEFAULT 0")
+            // 将现有的timestamp值复制到新字段中
+            db.execSQL("UPDATE $TABLE_NOTES SET $COLUMN_CREATED_TIME = $COLUMN_TIMESTAMP, $COLUMN_MODIFIED_TIME = $COLUMN_TIMESTAMP")
+        }
+        if (oldVersion < 8) {
+            // 添加软删除字段
+            db.execSQL("ALTER TABLE $TABLE_NOTES ADD COLUMN $COLUMN_DELETED INTEGER DEFAULT 0")
         }
     }
 
@@ -74,6 +102,8 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
             put(COLUMN_ID, note.id)
             put(COLUMN_CONTENT, note.content)
             put(COLUMN_TIMESTAMP, note.timestamp)
+            put(COLUMN_CREATED_TIME, note.createdTime)
+            put(COLUMN_MODIFIED_TIME, note.modifiedTime)
             put(COLUMN_CUSTOM_PROPERTIES, JSONObject(note.customProperties).toString())
         }
 
@@ -92,6 +122,8 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
         val values = ContentValues().apply {
             put(COLUMN_CONTENT, note.content)
             put(COLUMN_TIMESTAMP, note.timestamp)
+            put(COLUMN_CREATED_TIME, note.createdTime)
+            put(COLUMN_MODIFIED_TIME, note.modifiedTime)
             put(COLUMN_CUSTOM_PROPERTIES, JSONObject(note.customProperties).toString())
         }
 
@@ -118,22 +150,26 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
         }
     }
 
-    // 删除笔记
+    // 软删除笔记
     fun deleteNote(noteId: Long): Int {
+        val values = ContentValues().apply {
+            put(COLUMN_DELETED, 1)
+        }
         return writableDatabase.use { db ->
-            db.delete(
+            db.update(
                 TABLE_NOTES,
+                values,
                 "$COLUMN_ID = ?",
                 arrayOf(noteId.toString())
             )
         }
     }
 
-    // 获取所有笔记
+    // 获取所有笔记（未删除的）
     fun getAllNotes(): List<Note> {
         val notes = mutableListOf<Note>()
 
-        val query = "SELECT * FROM $TABLE_NOTES ORDER BY $COLUMN_TIMESTAMP DESC"
+        val query = "SELECT * FROM $TABLE_NOTES WHERE $COLUMN_DELETED = 0 ORDER BY $COLUMN_CREATED_TIME DESC"
 
         readableDatabase.use { db ->
             db.rawQuery(query, null).use { cursor ->
@@ -141,11 +177,13 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
                     val id = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID))
                     val content = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTENT))
                     val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
+                    val createdTime = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_CREATED_TIME))
+                    val modifiedTime = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_MODIFIED_TIME))
                     val customPropertiesJson = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CUSTOM_PROPERTIES)) ?: "{}"
                     val customProperties = parseCustomProperties(customPropertiesJson)
                     val tags = getTagsForNote(id)
 
-                    notes.add(Note(id, content, timestamp, tags, customProperties))
+                    notes.add(Note(id, content, createdTime, modifiedTime, tags, customProperties))
                 }
             }
         }
@@ -170,11 +208,13 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
                 if (cursor.moveToFirst()) {
                     val content = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTENT))
                     val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
+                    val createdTime = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_CREATED_TIME))
+                    val modifiedTime = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_MODIFIED_TIME))
                     val customPropertiesJson = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CUSTOM_PROPERTIES)) ?: "{}"
                     val customProperties = parseCustomProperties(customPropertiesJson)
                     val tags = getTagsForNote(noteId)
 
-                    note = Note(noteId, content, timestamp, tags, customProperties)
+                    note = Note(noteId, content, createdTime, modifiedTime, tags, customProperties)
                 }
             }
         }
@@ -182,16 +222,19 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
         return note
     }
 
-    // 批量删除笔记
+    // 批量软删除笔记
     fun deleteNotes(noteIds: List<Long>): Int {
         if (noteIds.isEmpty()) return 0
 
+        val values = ContentValues().apply {
+            put(COLUMN_DELETED, 1)
+        }
         val placeholders = noteIds.joinToString(", ") { "?" }
         val whereClause = "$COLUMN_ID IN ($placeholders)"
         val whereArgs = noteIds.map { it.toString() }.toTypedArray()
 
         return writableDatabase.use { db ->
-            db.delete(TABLE_NOTES, whereClause, whereArgs)
+            db.update(TABLE_NOTES, values, whereClause, whereArgs)
         }
     }
 
@@ -365,7 +408,7 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
                 "INNER JOIN $TABLE_NOTE_TAGS nt ON n.$COLUMN_ID = nt.$COLUMN_NOTE_ID " +
                 "INNER JOIN $TABLE_TAGS t ON nt.$COLUMN_TAG_ID = t.$COLUMN_TAG_ID " +
                 "WHERE t.$COLUMN_TAG_NAME = ? " +
-                "ORDER BY n.$COLUMN_TIMESTAMP DESC"
+                "ORDER BY n.$COLUMN_CREATED_TIME DESC"
 
         readableDatabase.use { db ->
             db.rawQuery(query, arrayOf(tagName)).use { cursor ->
@@ -373,11 +416,13 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
                     val id = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID))
                     val content = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTENT))
                     val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
+                    val createdTime = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_CREATED_TIME))
+                    val modifiedTime = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_MODIFIED_TIME))
                     val customPropertiesJson = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CUSTOM_PROPERTIES)) ?: "{}"
                     val customProperties = parseCustomProperties(customPropertiesJson)
                     val tags = getTagsForNote(id)
 
-                    notes.add(Note(id, content, timestamp, tags, customProperties))
+                    notes.add(Note(id, content, createdTime, modifiedTime, tags, customProperties))
                 }
             }
         }
@@ -398,6 +443,102 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
             map
         } catch (e: Exception) {
             emptyMap()
+        }
+    }
+    
+    // 回收站相关方法
+    
+    // 获取已删除的笔记
+    fun getDeletedNotes(): List<Note> {
+        val notes = mutableListOf<Note>()
+
+        val query = "SELECT * FROM $TABLE_NOTES WHERE $COLUMN_DELETED = 1 ORDER BY $COLUMN_CREATED_TIME DESC"
+
+        readableDatabase.use { db ->
+            db.rawQuery(query, null).use { cursor ->
+                while (cursor.moveToNext()) {
+                    val id = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID))
+                    val content = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTENT))
+                    val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
+                    val createdTime = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_CREATED_TIME))
+                    val modifiedTime = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_MODIFIED_TIME))
+                    val customPropertiesJson = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CUSTOM_PROPERTIES)) ?: "{}"
+                    val customProperties = parseCustomProperties(customPropertiesJson)
+                    val tags = getTagsForNote(id)
+
+                    notes.add(Note(id, content, createdTime, modifiedTime, tags, customProperties))
+                }
+            }
+        }
+
+        return notes
+    }
+    
+    // 恢复笔记
+    fun restoreNote(noteId: Long): Int {
+        val values = ContentValues().apply {
+            put(COLUMN_DELETED, 0)
+        }
+        return writableDatabase.use { db ->
+            db.update(
+                TABLE_NOTES,
+                values,
+                "$COLUMN_ID = ?",
+                arrayOf(noteId.toString())
+            )
+        }
+    }
+    
+    // 批量恢复笔记
+    fun restoreNotes(noteIds: List<Long>): Int {
+        if (noteIds.isEmpty()) return 0
+
+        val values = ContentValues().apply {
+            put(COLUMN_DELETED, 0)
+        }
+        val placeholders = noteIds.joinToString(", ") { "?" }
+        val whereClause = "$COLUMN_ID IN ($placeholders)"
+        val whereArgs = noteIds.map { it.toString() }.toTypedArray()
+
+        return writableDatabase.use { db ->
+            db.update(TABLE_NOTES, values, whereClause, whereArgs)
+        }
+    }
+    
+    // 永久删除笔记
+    fun permanentDeleteNote(noteId: Long): Int {
+        return writableDatabase.use { db ->
+            db.delete(
+                TABLE_NOTES,
+                "$COLUMN_ID = ?",
+                arrayOf(noteId.toString())
+            )
+        }
+    }
+    
+    // 批量永久删除笔记
+    fun permanentDeleteNotes(noteIds: List<Long>): Int {
+        if (noteIds.isEmpty()) return 0
+
+        val placeholders = noteIds.joinToString(", ") { "?" }
+        val whereClause = "$COLUMN_ID IN ($placeholders)"
+        val whereArgs = noteIds.map { it.toString() }.toTypedArray()
+
+        return writableDatabase.use { db ->
+            db.delete(TABLE_NOTES, whereClause, whereArgs)
+        }
+    }
+    
+    // 自动清理30天以上的已删除笔记
+    fun autoCleanOldDeletedNotes(): Int {
+        val thirtyDaysAgo = System.currentTimeMillis() - (30 * 24 * 60 * 60 * 1000L)
+        
+        return writableDatabase.use { db ->
+            db.delete(
+                TABLE_NOTES,
+                "$COLUMN_DELETED = 1 AND $COLUMN_MODIFIED_TIME < ?",
+                arrayOf(thirtyDaysAgo.toString())
+            )
         }
     }
 }

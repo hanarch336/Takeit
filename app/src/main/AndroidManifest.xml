@@ -34,6 +34,18 @@
             android:exported="false"
             android:theme="@style/Theme.Takeit"
             android:parentActivityName=".MainActivity" />
+            
+        <activity
+            android:name=".BackupManagementActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Takeit"
+            android:parentActivityName=".SettingsActivity" />
+            
+        <activity
+            android:name=".RecycleBinActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Takeit"
+            android:parentActivityName=".MainActivity" />
     </application>
 
 </manifest>

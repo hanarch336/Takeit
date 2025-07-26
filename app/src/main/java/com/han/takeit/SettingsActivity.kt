@@ -3,17 +3,32 @@ package com.han.takeit
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.os.LocaleList
 import android.widget.RadioGroup
 import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import com.google.android.material.slider.Slider
+import com.han.takeit.db.DatabaseBackupManager
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
 import java.util.*
 
 class SettingsActivity : AppCompatActivity() {
+    
+    private val saveBackupLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        uri?.let { saveBackupToUri(it) }
+    }
     
     companion object {
         const val LANGUAGE_SYSTEM = "system"
@@ -77,6 +92,7 @@ class SettingsActivity : AppCompatActivity() {
         setupToolbar()
         setupLanguageSettings()
         setupCardPreviewSettings()
+        setupBackupManagement()
     }
     
     private fun setupToolbar() {
@@ -134,6 +150,64 @@ class SettingsActivity : AppCompatActivity() {
             val maxLines = value.toInt()
             valueText.text = maxLines.toString()
             saveMaxLines(this, maxLines)
+        }
+    }
+    
+    private fun setupBackupManagement() {
+        val btnBackupManagement = findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_backup_management)
+        btnBackupManagement.setOnClickListener {
+            val intent = Intent(this, BackupManagementActivity::class.java)
+            startActivity(intent)
+        }
+        
+        val btnSaveCurrentDatabase = findViewById<com.google.android.material.button.MaterialButton>(R.id.btn_save_current_database)
+        btnSaveCurrentDatabase.setOnClickListener {
+            saveCurrentDatabaseToLocal()
+        }
+    }
+    
+    private fun saveCurrentDatabaseToLocal() {
+        try {
+            val backupManager = DatabaseBackupManager(this)
+            
+            // 创建备份文件
+            if (backupManager.createBackup()) {
+                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                val fileName = "takeit_database_$timestamp.db"
+                saveBackupLauncher.launch(fileName)
+            } else {
+                Toast.makeText(this, "创建备份失败", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    private fun saveBackupToUri(uri: Uri) {
+        try {
+            val backupManager = DatabaseBackupManager(this)
+            val backups = backupManager.getAllBackups()
+            if (backups.isNotEmpty()) {
+                val latestBackup = backups.first()
+                val sourceFile = File(latestBackup.filePath)
+                
+                if (!sourceFile.exists()) {
+                    Toast.makeText(this, "备份文件不存在", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                
+                contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    FileInputStream(sourceFile).use { inputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+                
+                Toast.makeText(this, "数据库已保存成功", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(this, "没有可用的备份文件", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "保存失败: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 }

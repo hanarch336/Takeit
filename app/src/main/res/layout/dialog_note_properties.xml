@@ -26,9 +26,29 @@
             android:id="@+id/etCreatedTime"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="创建时间"
+            android:hint="@string/created_time"
             android:focusable="false"
             android:clickable="true" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- 修改时间 -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        app:boxStrokeColor="@color/design_default_color_primary"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etModifiedTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/modified_time"
+            android:clickable="false"
+            android:focusable="false"
+            android:enabled="false"
+            android:textColor="@android:color/darker_gray" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

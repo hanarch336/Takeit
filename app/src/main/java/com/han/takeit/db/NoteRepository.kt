@@ -3,7 +3,7 @@ package com.han.takeit.db
 import android.content.Context
 import com.han.takeit.Note
 
-class NoteRepository(context: Context) {
+class NoteRepository(private val context: Context) {
     private val database = NoteDatabase(context)
     
     // 获取所有笔记
@@ -83,14 +83,54 @@ class NoteRepository(context: Context) {
     
     // 创建示例笔记
     fun createSampleNotes() {
+        val currentTime = System.currentTimeMillis()
         val sampleNotes = listOf(
-            Note(generateNoteId(), "完成项目开发\n准备会议材料", System.currentTimeMillis(), listOf("工作", "项目"), emptyMap()),
-            Note(generateNoteId(), "牛奶\n面包\n鸡蛋\n水果", System.currentTimeMillis() - 86400000, listOf("购物"), emptyMap()),
-            Note(generateNoteId(), "《Android开发艺术探索》\n第一章：Activity的生命周期", System.currentTimeMillis() - 172800000, listOf("学习", "Android"), emptyMap())
+            Note(generateNoteId(), "完成项目开发\n准备会议材料", currentTime, currentTime, listOf("工作", "项目"), emptyMap()),
+            Note(generateNoteId(), "牛奶\n面包\n鸡蛋\n水果", currentTime - 86400000, currentTime - 86400000, listOf("购物"), emptyMap()),
+            Note(generateNoteId(), "《Android开发艺术探索》\n第一章：Activity的生命周期", currentTime - 172800000, currentTime - 172800000, listOf("学习", "Android"), emptyMap())
         )
         
         for (note in sampleNotes) {
             saveNote(note)
         }
+    }
+    
+    // 回收站相关方法
+    
+    // 获取已删除的笔记
+    fun getDeletedNotes(): List<Note> {
+        return database.getDeletedNotes()
+    }
+    
+    // 恢复笔记
+    fun restoreNote(noteId: Long): Boolean {
+        return database.restoreNote(noteId) > 0
+    }
+    
+    // 批量恢复笔记
+    fun restoreNotes(noteIds: List<Long>): Int {
+        return database.restoreNotes(noteIds)
+    }
+    
+    // 永久删除笔记
+    fun permanentDeleteNote(noteId: Long): Boolean {
+        return database.permanentDeleteNote(noteId) > 0
+    }
+    
+    // 批量永久删除笔记
+    fun permanentDeleteNotes(noteIds: List<Long>): Int {
+        return database.permanentDeleteNotes(noteIds)
+    }
+    
+    // 自动清理30天以上的已删除笔记
+    fun autoCleanOldDeletedNotes(): Int {
+        return database.autoCleanOldDeletedNotes()
+    }
+    
+    /**
+     * 智能合并数据库
+     */
+    fun mergeDatabase(backupInfo: BackupInfo, conflictStrategy: ConflictStrategy = ConflictStrategy.KEEP_NEWER): MergeResult {
+        return DatabaseBackupManager(context).mergeDatabase(backupInfo, conflictStrategy)
     }
 }

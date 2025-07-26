@@ -143,10 +143,12 @@ class NoteEditActivity : AppCompatActivity() {
         // 创建或更新笔记对象
         val note = if (isNewNote) {
             // 新笔记，生成ID并标记为非新笔记
+            val currentTime = System.currentTimeMillis()
             val newNote = Note(
                 id = noteRepository.generateNoteId(),
                 content = content,
-                timestamp = System.currentTimeMillis(),
+                createdTime = currentTime,
+                modifiedTime = currentTime,
                 tags = currentNote?.tags ?: emptyList(),
                 customProperties = currentNote?.customProperties ?: emptyMap()
             )
@@ -156,17 +158,25 @@ class NoteEditActivity : AppCompatActivity() {
             currentNote = newNote
             newNote
         } else {
-            // 更新现有笔记
-            val updatedNote = currentNote?.copy(
-                content = content,
-                timestamp = System.currentTimeMillis()
-            ) ?: Note(
-                id = noteId,
-                content = content,
-                timestamp = System.currentTimeMillis(),
-                tags = emptyList(),
-                customProperties = emptyMap()
-            )
+            // 更新现有笔记，只有内容改变时才更新修改时间
+            val existingNote = currentNote
+            val updatedNote = if (existingNote != null) {
+                val contentChanged = existingNote.content != content
+                existingNote.copy(
+                    content = content,
+                    modifiedTime = if (contentChanged) System.currentTimeMillis() else existingNote.modifiedTime
+                )
+            } else {
+                val currentTime = System.currentTimeMillis()
+                Note(
+                    id = noteId,
+                    content = content,
+                    createdTime = currentTime,
+                    modifiedTime = currentTime,
+                    tags = emptyList(),
+                    customProperties = emptyMap()
+                )
+            }
             currentNote = updatedNote
             updatedNote
         }
@@ -215,10 +225,12 @@ class NoteEditActivity : AppCompatActivity() {
         // 如果是新笔记，先创建一个临时笔记对象
         val note = if (isNewNote || currentNote == null) {
             val content = binding.editContent.text.toString().trim()
+            val currentTime = System.currentTimeMillis()
             Note(
                 id = if (isNewNote) noteRepository.generateNoteId() else noteId,
                 content = content,
-                timestamp = System.currentTimeMillis(),
+                createdTime = currentTime,
+                modifiedTime = currentTime,
                 tags = emptyList(),
                 customProperties = emptyMap()
             )
@@ -227,10 +239,12 @@ class NoteEditActivity : AppCompatActivity() {
         }
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_note_properties, null)
         
-        // 设置创建时间
+        // 设置创建时间和修改时间
         val etCreatedTime = dialogView.findViewById<TextInputEditText>(R.id.etCreatedTime)
+        val etModifiedTime = dialogView.findViewById<TextInputEditText>(R.id.etModifiedTime)
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-        etCreatedTime.setText(dateFormat.format(Date(note.timestamp)))
+        etCreatedTime.setText(dateFormat.format(Date(note.createdTime)))
+        etModifiedTime.setText(dateFormat.format(Date(note.modifiedTime)))
         
         // 设置自定义属性列表
         val rvCustomProperties = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvCustomProperties)
@@ -268,7 +282,7 @@ class NoteEditActivity : AppCompatActivity() {
         btnSave.setOnClickListener {
             try {
                 // 解析新的创建时间
-                val newTimestamp = dateFormat.parse(etCreatedTime.text.toString())?.time ?: note.timestamp
+                val newCreatedTime = dateFormat.parse(etCreatedTime.text.toString())?.time ?: note.createdTime
                 
                 // 确保获取最新的输入值
                 adapter.updatePropertiesFromViews(rvCustomProperties)
@@ -278,7 +292,7 @@ class NoteEditActivity : AppCompatActivity() {
                 // 更新笔记
                 val updatedNote = note.copy(
                     content = binding.editContent.text.toString().trim(),
-                    timestamp = newTimestamp,
+                    createdTime = newCreatedTime,
                     customProperties = newCustomProperties
                 )
                 
@@ -369,10 +383,12 @@ class NoteEditActivity : AppCompatActivity() {
                 // 如果是新笔记，先创建笔记对象
                 val content = binding.editContent.text.toString().trim()
                 if (content.isNotEmpty()) {
+                    val currentTime = System.currentTimeMillis()
                     val newNote = Note(
                         id = noteRepository.generateNoteId(),
                         content = content,
-                        timestamp = System.currentTimeMillis(),
+                        createdTime = currentTime,
+                        modifiedTime = currentTime,
                         tags = selectedTags,
                         customProperties = emptyMap()
                     )
@@ -380,10 +396,12 @@ class NoteEditActivity : AppCompatActivity() {
                     isNewNote = false
                     newNote
                 } else {
+                    val currentTime = System.currentTimeMillis()
                     Note(
                         id = -1,
                         content = "",
-                        timestamp = System.currentTimeMillis(),
+                        createdTime = currentTime,
+                        modifiedTime = currentTime,
                         tags = selectedTags,
                         customProperties = emptyMap()
                     )
@@ -432,13 +450,14 @@ class NoteEditActivity : AppCompatActivity() {
                 val textColor = Color.parseColor(textColorString)
                 setTextColor(textColor)
                 
-                textSize = 12f
+                textSize = 14f
+                setPadding(24, 14, 24, 14) // 与首页卡片标签保持一致的内边距
                 
                 val layoutParams = FlexboxLayout.LayoutParams(
                     FlexboxLayout.LayoutParams.WRAP_CONTENT,
                     FlexboxLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    setMargins(8, 4, 8, 4)
+                    setMargins(0, 0, 16, 8) // 与首页卡片标签保持一致的外边距
                 }
                 this.layoutParams = layoutParams
             }

@@ -118,6 +118,9 @@ class MainActivity : AppCompatActivity() {
         // 设置侧边栏RecyclerView
         setupSidebar()
         
+        // 设置侧边栏按钮
+        setupSidebarButtons()
+        
         // 启用DrawerLayout的滑动手势
         binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
     }
@@ -151,6 +154,20 @@ class MainActivity : AppCompatActivity() {
     private fun updateSidebarData() {
         // 更新侧边栏显示的笔记数据
         sidebarAdapter.updateData(allNotesList)
+    }
+    
+    private fun setupSidebarButtons() {
+        binding.btnSettings.setOnClickListener {
+            val intent = Intent(this, SettingsActivity::class.java)
+            startActivity(intent)
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+        }
+        
+        binding.btnRecycleBin.setOnClickListener {
+            val intent = Intent(this, RecycleBinActivity::class.java)
+            startActivity(intent)
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+        }
     }
     
 
