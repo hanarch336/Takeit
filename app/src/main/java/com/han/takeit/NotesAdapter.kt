@@ -63,7 +63,7 @@ class NotesAdapter(
             onNoteLongClick: (Note) -> Unit,
             onToggleSelection: (Note) -> Unit
         ) {
-            // 根据设置的最大行数显示内容预览
+            // 不区分标题和内容，直接显示笔记内容
             val lines = note.content.split("\n")
             val preview = if (lines.size > maxLines) {
                 lines.take(maxLines).joinToString("\n")
@@ -71,9 +71,10 @@ class NotesAdapter(
                 note.content
             }
             
-            // 设置TextView的最大行数
-            binding.textTitle.maxLines = maxLines
-            binding.textTitle.text = preview
+            // 隐藏标题，只显示内容
+            binding.textTitle.visibility = android.view.View.GONE
+            binding.textContent.text = if (preview.isNotBlank()) preview else "无内容"
+            binding.textContent.maxLines = maxLines
             
             // 显示标签
             updateTagsDisplay(note.tags, binding.tagsContainer, noteRepository)
