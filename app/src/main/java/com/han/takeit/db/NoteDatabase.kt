@@ -5,18 +5,20 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.han.takeit.Note
+import org.json.JSONObject
 
 class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
 
     companion object {
         private const val DATABASE_NAME = "notes.db"
-        private const val DATABASE_VERSION = 5
+        private const val DATABASE_VERSION = 6
 
         // 笔记表
         const val TABLE_NOTES = "notes"
         const val COLUMN_ID = "id"
         const val COLUMN_CONTENT = "content"
         const val COLUMN_TIMESTAMP = "timestamp"
+        const val COLUMN_CUSTOM_PROPERTIES = "custom_properties"
         
         // 标签表
         const val TABLE_TAGS = "tags"
@@ -34,7 +36,8 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
         val createNotesTable = "CREATE TABLE $TABLE_NOTES ("
             .plus("$COLUMN_ID INTEGER PRIMARY KEY, ")
             .plus("$COLUMN_CONTENT TEXT, ")
-            .plus("$COLUMN_TIMESTAMP INTEGER)")
+            .plus("$COLUMN_TIMESTAMP INTEGER, ")
+            .plus("$COLUMN_CUSTOM_PROPERTIES TEXT DEFAULT '{}')")
         db.execSQL(createNotesTable)
         
         // 创建标签表
@@ -59,6 +62,10 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
             // 为标签表添加颜色字段
             db.execSQL("ALTER TABLE $TABLE_TAGS ADD COLUMN $COLUMN_TAG_COLOR TEXT DEFAULT '#6200EE'")
         }
+        if (oldVersion < 6) {
+            // 为笔记表添加自定义属性字段
+            db.execSQL("ALTER TABLE $TABLE_NOTES ADD COLUMN $COLUMN_CUSTOM_PROPERTIES TEXT DEFAULT '{}'")
+        }
     }
 
     // 插入笔记
@@ -67,6 +74,7 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
             put(COLUMN_ID, note.id)
             put(COLUMN_CONTENT, note.content)
             put(COLUMN_TIMESTAMP, note.timestamp)
+            put(COLUMN_CUSTOM_PROPERTIES, JSONObject(note.customProperties).toString())
         }
 
         return writableDatabase.use { db ->
@@ -84,6 +92,7 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
         val values = ContentValues().apply {
             put(COLUMN_CONTENT, note.content)
             put(COLUMN_TIMESTAMP, note.timestamp)
+            put(COLUMN_CUSTOM_PROPERTIES, JSONObject(note.customProperties).toString())
         }
 
         return writableDatabase.use { db ->
@@ -132,9 +141,11 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
                     val id = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID))
                     val content = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTENT))
                     val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
+                    val customPropertiesJson = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CUSTOM_PROPERTIES)) ?: "{}"
+                    val customProperties = parseCustomProperties(customPropertiesJson)
                     val tags = getTagsForNote(id)
 
-                    notes.add(Note(id, content, timestamp, tags))
+                    notes.add(Note(id, content, timestamp, tags, customProperties))
                 }
             }
         }
@@ -159,9 +170,11 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
                 if (cursor.moveToFirst()) {
                     val content = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTENT))
                     val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
+                    val customPropertiesJson = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CUSTOM_PROPERTIES)) ?: "{}"
+                    val customProperties = parseCustomProperties(customPropertiesJson)
                     val tags = getTagsForNote(noteId)
 
-                    note = Note(noteId, content, timestamp, tags)
+                    note = Note(noteId, content, timestamp, tags, customProperties)
                 }
             }
         }
@@ -360,13 +373,31 @@ class NoteDatabase(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME, 
                     val id = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_ID))
                     val content = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CONTENT))
                     val timestamp = cursor.getLong(cursor.getColumnIndexOrThrow(COLUMN_TIMESTAMP))
+                    val customPropertiesJson = cursor.getString(cursor.getColumnIndexOrThrow(COLUMN_CUSTOM_PROPERTIES)) ?: "{}"
+                    val customProperties = parseCustomProperties(customPropertiesJson)
                     val tags = getTagsForNote(id)
 
-                    notes.add(Note(id, content, timestamp, tags))
+                    notes.add(Note(id, content, timestamp, tags, customProperties))
                 }
             }
         }
 
         return notes
+    }
+
+    // 解析自定义属性JSON字符串
+    private fun parseCustomProperties(json: String): Map<String, String> {
+        return try {
+            val jsonObject = JSONObject(json)
+            val map = mutableMapOf<String, String>()
+            val keys = jsonObject.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                map[key] = jsonObject.getString(key)
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
     }
 }

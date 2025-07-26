@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -13,16 +14,17 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.StaggeredGridLayoutManager
-import com.google.android.material.navigation.NavigationView
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.han.takeit.databinding.ActivityMainBinding
 import com.han.takeit.db.NoteRepository
 import java.util.*
 
-class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var drawerToggle: ActionBarDrawerToggle
     private lateinit var notesAdapter: NotesAdapter
+    private lateinit var sidebarAdapter: SidebarAdapter
     private lateinit var noteRepository: NoteRepository
     private val notesList = mutableListOf<Note>()
     private val allNotesList = mutableListOf<Note>()
@@ -113,10 +115,42 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // 强制同步状态，确保显示正确的汉堡图标
         drawerToggle.syncState()
         
-        binding.navView.setNavigationItemSelectedListener(this)
+        // 设置侧边栏RecyclerView
+        setupSidebar()
         
         // 启用DrawerLayout的滑动手势
         binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+    }
+    
+    private fun setupSidebar() {
+        sidebarAdapter = SidebarAdapter { note ->
+            // 点击笔记直接进入编辑界面
+            editNote(note)
+            // 关闭侧边栏
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+        }
+        
+        binding.recyclerSidebar.apply {
+            layoutManager = LinearLayoutManager(this@MainActivity)
+            adapter = sidebarAdapter
+            
+            // 限制最大高度为7项
+            val itemHeight = resources.getDimensionPixelSize(R.dimen.sidebar_item_height)
+            val maxHeight = itemHeight * 7
+            layoutParams = layoutParams.apply {
+                if (this is ViewGroup.LayoutParams) {
+                    height = maxHeight
+                }
+            }
+        }
+        
+        // 初始化侧边栏数据
+        updateSidebarData()
+    }
+    
+    private fun updateSidebarData() {
+        // 更新侧边栏显示的笔记数据
+        sidebarAdapter.updateData(allNotesList)
     }
     
 
@@ -180,6 +214,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         
         // 从数据库加载所有笔记
         allNotesList.addAll(noteRepository.getAllNotes())
+        
+        // 更新侧边栏数据
+        updateSidebarData()
     }
     
     private fun showAllNotes() {
@@ -249,73 +286,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
     
-    override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        // 如果在搜索模式，先关闭搜索
-        if (isSearchMode) {
-            val searchItem = binding.toolbar.menu.findItem(R.id.action_search)
-            val searchView = searchItem?.actionView as? SearchView
-            searchView?.onActionViewCollapsed()
-            isSearchMode = false
-            currentSearchQuery = ""
-        }
-        
-        when (item.itemId) {
-            R.id.nav_all_notes -> {
-                // 显示所有笔记
-                showAllNotes()
-            }
-            R.id.nav_today -> {
-                // 显示今天的笔记
-                filterNotesByDate(0)
-            }
-            R.id.nav_yesterday -> {
-                // 显示昨天的笔记
-                filterNotesByDate(1)
-            }
-            R.id.nav_this_week -> {
-                // 显示本周的笔记
-                filterNotesByDate(7)
-            }
-            R.id.nav_this_month -> {
-                // 显示本月的笔记
-                filterNotesByDate(30)
-            }
-            R.id.nav_settings -> {
-                // 打开设置页面
-                val intent = Intent(this, SettingsActivity::class.java)
-                startActivity(intent)
-            }
-            R.id.nav_about -> {
-                // 显示关于信息
-            }
-        }
-        binding.drawerLayout.closeDrawer(GravityCompat.START)
-        return true
-    }
-    
-    private fun filterNotesByDate(daysAgo: Int) {
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        
-        val endTime = calendar.timeInMillis
-        calendar.add(Calendar.DAY_OF_YEAR, -daysAgo)
-        val startTime = calendar.timeInMillis
-        
-        val filteredNotes = if (daysAgo == 0) {
-            // 今天的笔记
-            allNotesList.filter { it.timestamp >= endTime }
-        } else {
-            // 指定天数内的笔记
-            allNotesList.filter { it.timestamp >= startTime && it.timestamp < endTime }
-        }
-        
-        notesList.clear()
-        notesList.addAll(filteredNotes)
-        notesAdapter.notifyDataSetChanged()
-    }
+
     
     private fun enterSelectionMode(note: Note) {
         isSelectionMode = true

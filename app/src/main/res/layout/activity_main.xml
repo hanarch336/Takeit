@@ -52,13 +52,27 @@
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <!-- 侧边栏 -->
-    <com.google.android.material.navigation.NavigationView
-        android:id="@+id/nav_view"
+    <LinearLayout
+        android:id="@+id/sidebar_container"
         android:layout_width="280dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:fitsSystemWindows="true"
-        app:headerLayout="@layout/nav_header_main"
-        app:menu="@menu/activity_main_drawer" />
+        android:orientation="vertical"
+        android:background="?attr/colorSurface"
+        android:fitsSystemWindows="true">
+
+        <!-- 侧边栏头部 -->
+        <include layout="@layout/nav_header_main" />
+
+        <!-- 侧边栏内容 -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_sidebar"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:paddingTop="8dp"
+            android:clipToPadding="false" />
+
+    </LinearLayout>
 
 </androidx.drawerlayout.widget.DrawerLayout>

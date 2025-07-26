@@ -7,7 +7,8 @@ data class Note(
     val id: Long,
     val content: String,
     val timestamp: Long,
-    val tags: List<String> = emptyList()
+    val tags: List<String> = emptyList(),
+    val customProperties: Map<String, String> = emptyMap()
 ) {
     fun getFormattedDate(): String {
         val sdf = SimpleDateFormat("yyyy年MM月dd日", Locale.getDefault())

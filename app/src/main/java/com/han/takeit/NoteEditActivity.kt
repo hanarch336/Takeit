@@ -1,5 +1,7 @@
 package com.han.takeit
 
+import android.widget.DatePicker
+import android.widget.TimePicker
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -8,6 +10,7 @@ import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.util.TypedValue
+import android.view.LayoutInflater
 import android.view.Menu
 import com.han.takeit.db.Tag
 import android.graphics.Color
@@ -17,9 +20,14 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.flexbox.FlexboxLayout
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
 import com.han.takeit.databinding.ActivityNoteEditBinding
 import com.han.takeit.db.NoteRepository
+import java.text.SimpleDateFormat
+import java.util.*
 
 class NoteEditActivity : AppCompatActivity() {
 
@@ -139,7 +147,8 @@ class NoteEditActivity : AppCompatActivity() {
                 id = noteRepository.generateNoteId(),
                 content = content,
                 timestamp = System.currentTimeMillis(),
-                tags = currentNote?.tags ?: emptyList()
+                tags = currentNote?.tags ?: emptyList(),
+                customProperties = currentNote?.customProperties ?: emptyMap()
             )
             // 更新状态
             noteId = newNote.id
@@ -155,7 +164,8 @@ class NoteEditActivity : AppCompatActivity() {
                 id = noteId,
                 content = content,
                 timestamp = System.currentTimeMillis(),
-                tags = emptyList()
+                tags = emptyList(),
+                customProperties = emptyMap()
             )
             currentNote = updatedNote
             updatedNote
@@ -189,6 +199,10 @@ class NoteEditActivity : AppCompatActivity() {
                 finish()
                 true
             }
+            R.id.action_properties -> {
+                showNotePropertiesDialog()
+                true
+            }
             R.id.action_delete -> {
                 deleteNote()
                 true
@@ -197,7 +211,131 @@ class NoteEditActivity : AppCompatActivity() {
         }
     }
     
-
+    private fun showNotePropertiesDialog() {
+        // 如果是新笔记，先创建一个临时笔记对象
+        val note = if (isNewNote || currentNote == null) {
+            val content = binding.editContent.text.toString().trim()
+            Note(
+                id = if (isNewNote) noteRepository.generateNoteId() else noteId,
+                content = content,
+                timestamp = System.currentTimeMillis(),
+                tags = emptyList(),
+                customProperties = emptyMap()
+            )
+        } else {
+            currentNote!!
+        }
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_note_properties, null)
+        
+        // 设置创建时间
+        val etCreatedTime = dialogView.findViewById<TextInputEditText>(R.id.etCreatedTime)
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        etCreatedTime.setText(dateFormat.format(Date(note.timestamp)))
+        
+        // 设置自定义属性列表
+        val rvCustomProperties = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvCustomProperties)
+        val properties = note.customProperties.map { it.key to it.value }.toMutableList()
+        val adapter = CustomPropertyAdapter(properties) {}
+        
+        rvCustomProperties.layoutManager = LinearLayoutManager(this)
+        rvCustomProperties.adapter = adapter
+        
+        // 添加属性按钮
+        val btnAddProperty = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnAddProperty)
+        btnAddProperty.setOnClickListener {
+            adapter.addProperty()
+        }
+        
+        // 创建时间点击事件
+        etCreatedTime.setOnClickListener {
+            showDateTimePicker { selectedTimestamp ->
+                etCreatedTime.setText(dateFormat.format(Date(selectedTimestamp)))
+            }
+        }
+        
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .create()
+        
+        // 取消按钮
+        val btnCancel = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnCancel)
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        // 保存按钮
+        val btnSave = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSave)
+        btnSave.setOnClickListener {
+            try {
+                // 解析新的创建时间
+                val newTimestamp = dateFormat.parse(etCreatedTime.text.toString())?.time ?: note.timestamp
+                
+                // 确保获取最新的输入值
+                adapter.updatePropertiesFromViews(rvCustomProperties)
+                // 获取自定义属性
+                val newCustomProperties = adapter.getProperties()
+                
+                // 更新笔记
+                val updatedNote = note.copy(
+                    content = binding.editContent.text.toString().trim(),
+                    timestamp = newTimestamp,
+                    customProperties = newCustomProperties
+                )
+                
+                // 如果是新笔记，更新状态
+                if (isNewNote) {
+                    noteId = updatedNote.id
+                    isNewNote = false
+                }
+                
+                currentNote = updatedNote
+                noteRepository.saveNote(updatedNote)
+                
+                dialog.dismiss()
+            } catch (e: Exception) {
+                // 时间格式错误，显示提示
+                etCreatedTime.error = "时间格式错误"
+            }
+        }
+        
+        dialog.show()
+    }
+    
+    private fun showDateTimePicker(onDateTimeSelected: (Long) -> Unit) {
+        val calendar = Calendar.getInstance()
+        
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_datetime_picker, null)
+        val datePicker = dialogView.findViewById<DatePicker>(R.id.datePicker)
+        val timePicker = dialogView.findViewById<TimePicker>(R.id.timePicker)
+        
+        // 设置当前日期和时间
+        datePicker.init(
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH),
+            null
+        )
+        timePicker.hour = calendar.get(Calendar.HOUR_OF_DAY)
+        timePicker.minute = calendar.get(Calendar.MINUTE)
+        
+        MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
+                // 获取选择的日期和时间
+                val newCalendar = Calendar.getInstance()
+                newCalendar.set(
+                    datePicker.year,
+                    datePicker.month,
+                    datePicker.dayOfMonth,
+                    timePicker.hour,
+                    timePicker.minute,
+                    0
+                )
+                onDateTimeSelected(newCalendar.timeInMillis)
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
     
     private fun deleteNote() {
         if (isNewNote) {
@@ -235,7 +373,8 @@ class NoteEditActivity : AppCompatActivity() {
                         id = noteRepository.generateNoteId(),
                         content = content,
                         timestamp = System.currentTimeMillis(),
-                        tags = selectedTags
+                        tags = selectedTags,
+                        customProperties = emptyMap()
                     )
                     noteId = newNote.id
                     isNewNote = false
@@ -245,7 +384,8 @@ class NoteEditActivity : AppCompatActivity() {
                         id = -1,
                         content = "",
                         timestamp = System.currentTimeMillis(),
-                        tags = selectedTags
+                        tags = selectedTags,
+                        customProperties = emptyMap()
                     )
                 }
             } else {
@@ -303,6 +443,25 @@ class NoteEditActivity : AppCompatActivity() {
                 this.layoutParams = layoutParams
             }
             tagsContainer.addView(textView)
+        }
+    }
+    
+    override fun onPause() {
+        super.onPause()
+        // 在Activity暂停时立即保存笔记，确保用户输入不丢失
+        autoSaveRunnable?.let { autoSaveHandler.removeCallbacks(it) }
+        
+        val content = binding.editContent.text.toString().trim()
+        
+        if (content.isEmpty()) {
+            // 如果没有内容，删除笔记（如果已保存）
+            if (!isNewNote && noteId != -1L) {
+                noteRepository.deleteNote(noteId)
+            }
+            // 不保存空笔记
+        } else {
+            // 有内容时才保存
+            autoSaveNote()
         }
     }
     

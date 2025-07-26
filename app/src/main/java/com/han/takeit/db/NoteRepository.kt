@@ -84,9 +84,9 @@ class NoteRepository(context: Context) {
     // 创建示例笔记
     fun createSampleNotes() {
         val sampleNotes = listOf(
-            Note(generateNoteId(), "完成项目开发\n准备会议材料", System.currentTimeMillis(), listOf("工作", "项目")),
-            Note(generateNoteId(), "牛奶\n面包\n鸡蛋\n水果", System.currentTimeMillis() - 86400000, listOf("购物")),
-            Note(generateNoteId(), "《Android开发艺术探索》\n第一章：Activity的生命周期", System.currentTimeMillis() - 172800000, listOf("学习", "Android"))
+            Note(generateNoteId(), "完成项目开发\n准备会议材料", System.currentTimeMillis(), listOf("工作", "项目"), emptyMap()),
+            Note(generateNoteId(), "牛奶\n面包\n鸡蛋\n水果", System.currentTimeMillis() - 86400000, listOf("购物"), emptyMap()),
+            Note(generateNoteId(), "《Android开发艺术探索》\n第一章：Activity的生命周期", System.currentTimeMillis() - 172800000, listOf("学习", "Android"), emptyMap())
         )
         
         for (note in sampleNotes) {
